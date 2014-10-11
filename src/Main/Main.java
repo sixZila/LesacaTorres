@@ -28,7 +28,7 @@ public class Main {
             }
 
         } else {
-            ArrayList<Socket> peers = new ArrayList();
+            ArrayList<Peer> peers = new ArrayList();
             System.out.println("Starting as a server using port 1234.");
             while (true) {
                 try {
@@ -36,7 +36,7 @@ public class Main {
 
                     while (true) {
                         Socket peer = server.accept();
-                        peers.add(peer);
+
                         Thread t = new Thread(new ServerClientThread(peer, peers));
                         t.start();
                     }

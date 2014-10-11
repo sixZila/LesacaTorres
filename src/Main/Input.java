@@ -21,7 +21,9 @@ public class Input implements Runnable {
             DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
             Scanner s = new Scanner(System.in);
             
-            dos.writeUTF(s.nextLine());
+            while (true) {
+                dos.writeUTF(s.nextLine());
+            }
         } catch (IOException ex) {
             Logger.getLogger(Input.class.getName()).log(Level.SEVERE, null, ex);
         }
