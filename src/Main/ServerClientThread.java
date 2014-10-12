@@ -79,26 +79,42 @@ public class ServerClientThread implements Runnable {
 
                 switch (stringarray[0]) {
                     case "\"POST\"":
-                        message = combineMessage(stringarray, 1);
-                        for (Peer follower : peers) {
-                            Socket s = follower.getSocket();
-                            DataOutputStream out = new DataOutputStream(s.getOutputStream());
-                            out.writeUTF(name + " posted: " + message);
-                            dos.writeUTF("Posted a message to your followers.");
+                        if (stringarray.length > 1) {
+                            message = combineMessage(stringarray, 1);
+                            for (Peer follower : peers) {
+                                Socket s = follower.getSocket();
+                                DataOutputStream out = new DataOutputStream(s.getOutputStream());
+                                out.writeUTF(name + " posted: " + message);
+                                dos.writeUTF("Posted a message to your followers.");
+                            }
+                        } else {
+                            dos.writeUTF("There's no message to be posted.");
                         }
                         break;
                     case "\"PM\"":
-                        message = combineMessage(stringarray, 2);
-                        for (Peer peer : peers) {
-                            if (peer.checkUsername(stringarray[1])) {
-                                Socket s = peer.getSocket();
-                                DataOutputStream out = new DataOutputStream(s.getOutputStream());
-                                out.writeUTF(name + " sent a message: " + message);
-                                dos.writeUTF("Sent a message to " + stringarray[1]);
-                                break;
+                        if (stringarray.length > 2) {
+                            boolean messagesent = false;
+                            message = combineMessage(stringarray, 2);
+                            for (Peer peer : peers) {
+                                if (peer.checkUsername(stringarray[1])) {
+                                    Socket s = peer.getSocket();
+                                    DataOutputStream out = new DataOutputStream(s.getOutputStream());
+                                    out.writeUTF(name + " sent a message: " + message);
+                                    dos.writeUTF("Sent a message to " + stringarray[1]);
+                                    messagesent = true;
+                                    break;
+                                }
+                                if(!messagesent) {
+                                    dos.writeUTF(stringarray[1] + " does not exist.");
+                                }
                             }
+                        } else if(stringarray.length == 2){
+                            dos.writeUTF("There's no message to be sent.");
+                        } else {
+                            dos.writeUTF("There's no username.");
                         }
                         break;
+
                     case "\"FOLLOW\"":
                         boolean follow = false;
                         for (Peer peer : peers) {
