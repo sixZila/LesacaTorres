@@ -1,6 +1,6 @@
 package Main;
 
-import java.io.DataOutputStream;
+import java.io.PrintWriter;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Scanner;
@@ -18,11 +18,11 @@ public class Input implements Runnable {
     @Override
     public void run() {
         try {
-            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+            PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
             Scanner s = new Scanner(System.in);
-            
+
             while (true) {
-                dos.writeUTF(s.nextLine());
+                pw.println(s.nextLine());
             }
         } catch (IOException ex) {
             Logger.getLogger(Input.class.getName()).log(Level.SEVERE, null, ex);

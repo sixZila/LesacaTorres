@@ -1,8 +1,9 @@
 package Main;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
+import java.io.BufferedReader;
+import java.io.PrintWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.Socket;
 import java.util.ArrayList;
 
@@ -33,17 +34,17 @@ public class ServerClientThread implements Runnable {
 
     @Override
     public void run() {
-        DataInputStream dis = null;
-        DataOutputStream dos = null;
+        BufferedReader br = null;
+        PrintWriter pw = null;
         boolean login;
         try {
-            dis = new DataInputStream(socket.getInputStream());
-            dos = new DataOutputStream(socket.getOutputStream());
+            br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            pw = new PrintWriter(socket.getOutputStream(), true);
 
-            dos.writeUTF("Username:");
+            pw.println("Username:");
             String name;
             do {
-                name = dis.readUTF();
+                name = br.readLine();
                 login = true;
 
                 if (!(name.isEmpty() || name.equals(""))) {
@@ -51,29 +52,29 @@ public class ServerClientThread implements Runnable {
                     if (name2.length == 1) {
                         for (Peer peer : peers) {
                             if (peer.checkUsername(name)) {
-                                dos.writeUTF(name + " already exists.");
+                                pw.println(name + " already exists.");
                                 login = false;
                                 break;
                             }
                         }
                         if (login) {
                             this.name = name;
-                            dos.writeUTF("Logged in as " + name);
+                            pw.println("Logged in as " + name);
                             user = new Peer(socket, name);
                             peers.add(user);
                         }
                     } else {
-                        dos.writeUTF("Your username should not contain any spaces.");
+                        pw.println("Your username should not contain any spaces.");
                         login = false;
                     }
                 } else {
-                    dos.writeUTF("Your username can not be blank.");
+                    pw.println("Your username can not be blank.");
                     login = false;
                 }
             } while (!login);
 
             while (true) {
-                String string = dis.readUTF();
+                String string = br.readLine();
                 String[] stringarray = string.split("\\s");
                 String message;
 
@@ -81,14 +82,19 @@ public class ServerClientThread implements Runnable {
                     case "\"POST\"":
                         if (stringarray.length > 1) {
                             message = combineMessage(stringarray, 1);
-                            for (Peer follower : peers) {
-                                Socket s = follower.getSocket();
-                                DataOutputStream out = new DataOutputStream(s.getOutputStream());
-                                out.writeUTF(name + " posted: " + message);
-                                dos.writeUTF("Posted a message to your followers.");
+                            for (String follower : user.getFollowers()) {
+                                for (Peer peer : peers) {
+                                    if (peer.checkUsername(follower)) {
+                                        Socket s = peer.getSocket();
+                                        PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+                                        out.println(name + " posted: " + message);
+                                        break;
+                                    }
+                                }
                             }
+                            pw.println("Posted a message to your followers.");
                         } else {
-                            dos.writeUTF("There's no message to be posted.");
+                            pw.println("There's no message to be posted.");
                         }
                         break;
                     case "\"PM\"":
@@ -98,20 +104,20 @@ public class ServerClientThread implements Runnable {
                             for (Peer peer : peers) {
                                 if (peer.checkUsername(stringarray[1])) {
                                     Socket s = peer.getSocket();
-                                    DataOutputStream out = new DataOutputStream(s.getOutputStream());
-                                    out.writeUTF(name + " sent a message: " + message);
-                                    dos.writeUTF("Sent a message to " + stringarray[1]);
+                                    PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+                                    out.println(name + " sent a message: " + message);
+                                    pw.println("Sent a message to " + stringarray[1]);
                                     messagesent = true;
                                     break;
                                 }
-                                if(!messagesent) {
-                                    dos.writeUTF(stringarray[1] + " does not exist.");
+                                if (!messagesent) {
+                                    pw.println(stringarray[1] + " does not exist.");
                                 }
                             }
-                        } else if(stringarray.length == 2){
-                            dos.writeUTF("There's no message to be sent.");
+                        } else if (stringarray.length == 2) {
+                            pw.println("There's no message to be sent.");
                         } else {
-                            dos.writeUTF("There's no username.");
+                            pw.println("There's no username.");
                         }
                         break;
 
@@ -120,22 +126,22 @@ public class ServerClientThread implements Runnable {
                         for (Peer peer : peers) {
                             if (peer.checkUsername(stringarray[1])) {
                                 if (peer.getFollowers().contains(name)) {
-                                    dos.writeUTF("You are already following this user.");
+                                    pw.println("You are already following this user.");
                                 } else if (peer.getRequest().contains(name)) {
-                                    dos.writeUTF("Request already sent.");
+                                    pw.println("Request already sent.");
                                 } else {
                                     peer.getRequest().add(name);
                                     Socket s = peer.getSocket();
-                                    DataOutputStream out = new DataOutputStream(s.getOutputStream());
-                                    out.writeUTF(name + " wants to follow you.");
-                                    dos.writeUTF("Follow request sent.");
+                                    PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+                                    out.println(name + " wants to follow you.");
+                                    pw.println("Follow request sent.");
                                 }
                                 follow = true;
                                 break;
                             }
                         }
                         if (!follow) {
-                            dos.writeUTF("User does not exist");
+                            pw.println("User does not exist");
                         }
                         break;
                     case "\"ACCEPT\"":
@@ -146,14 +152,14 @@ public class ServerClientThread implements Runnable {
                             for (Peer peer : peers) {
                                 if (peer.checkUsername(stringarray[1])) {
                                     Socket s = peer.getSocket();
-                                    DataOutputStream out = new DataOutputStream(s.getOutputStream());
-                                    out.writeUTF("You are now following " + name);
-                                    dos.writeUTF(stringarray[1] + " is now following you.");
+                                    PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+                                    out.println("You are now following " + name);
+                                    pw.println(stringarray[1] + " is now following you.");
                                     break;
                                 }
                             }
                         } else {
-                            dos.writeUTF(stringarray[1] + " did not send you a follow request.");
+                            pw.println(stringarray[1] + " did not send you a follow request.");
                         }
                         break;
                 }
@@ -162,8 +168,8 @@ public class ServerClientThread implements Runnable {
             System.out.println("Client: " + socket.getInetAddress().getHostAddress() + " disconnected.");
         } finally {
             try {
-                dis.close();
-                dos.close();
+                br.close();
+                pw.close();
             } catch (IOException ex) {
 
             }
