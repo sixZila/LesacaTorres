@@ -5,6 +5,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Iterator;
 
 public class ServerClientThread implements Runnable {
 
@@ -82,6 +83,7 @@ public class ServerClientThread implements Runnable {
                     case "\"POST\"":
                         if (stringarray.length > 1) {
                             message = combineMessage(stringarray, 1);
+
                             for (String follower : user.getFollowers()) {
                                 for (Peer peer : peers) {
                                     if (peer.checkUsername(follower)) {
@@ -101,6 +103,7 @@ public class ServerClientThread implements Runnable {
                         if (stringarray.length > 2) {
                             boolean messagesent = false;
                             message = combineMessage(stringarray, 2);
+
                             for (Peer peer : peers) {
                                 if (peer.checkUsername(stringarray[1])) {
                                     Socket s = peer.getSocket();
@@ -120,11 +123,11 @@ public class ServerClientThread implements Runnable {
                             outputStream.writeUTF("There's no username.");
                         }
                         break;
-
                     case "\"FOLLOW\"":
                         boolean follow = false;
                         for (Peer peer : peers) {
                             if (peer.checkUsername(stringarray[1])) {
+
                                 if (peer.getFollowers().contains(name)) {
                                     outputStream.writeUTF("You are already following this user.");
                                 } else if (peer.getRequest().contains(name)) {
@@ -144,7 +147,7 @@ public class ServerClientThread implements Runnable {
                             outputStream.writeUTF("User does not exist");
                         }
                         break;
-                    case "\"ACCEPT\"":
+                    case "\"APPROVE\"":
                         if (user.getRequest().contains(stringarray[1])) {
                             user.getRequest().remove(stringarray[1]);
                             user.getFollowers().add(stringarray[1]);
@@ -153,6 +156,7 @@ public class ServerClientThread implements Runnable {
                                 if (peer.checkUsername(stringarray[1])) {
                                     Socket s = peer.getSocket();
                                     DataOutputStream out = new DataOutputStream(s.getOutputStream());
+
                                     out.writeUTF("You are now following " + name);
                                     outputStream.writeUTF(stringarray[1] + " is now following you.");
                                     break;
@@ -162,6 +166,34 @@ public class ServerClientThread implements Runnable {
                             outputStream.writeUTF(stringarray[1] + " did not send you a follow request.");
                         }
                         break;
+                    case "\"UNFOLLOW\"":
+                        boolean unfollow = false;
+                        for (Peer peer : peers) {
+                            if (peer.checkUsername(stringarray[1])) {
+
+                                if (peer.getFollowers().contains(name)) {
+                                    peer.getFollowers().remove(name);
+
+                                    Socket s = peer.getSocket();
+                                    DataOutputStream out = new DataOutputStream(s.getOutputStream());
+
+                                    out.writeUTF(name + " unfollowed you.");
+
+                                    outputStream.writeUTF("You have unfollowed " + stringarray[1]);
+
+                                } else {
+                                     outputStream.writeUTF("You are not following " + stringarray[1]);
+                                }
+                                unfollow = true;
+                                break;
+                            }
+                        }
+                        if (!unfollow) {
+                            outputStream.writeUTF("User does not exist");
+                        }
+                        break;
+                    default:
+                        outputStream.writeUTF("Wrong syntax.");
                 }
             }
         } catch (IOException ex) {
@@ -170,6 +202,13 @@ public class ServerClientThread implements Runnable {
             try {
                 inputStream.close();
                 outputStream.close();
+
+                for (Iterator<Peer> it = peers.iterator(); it.hasNext();) {
+                    Peer peer = it.next();
+                    if (peer.checkUsername(name)) {
+                        it.remove();
+                    }
+                }
             } catch (IOException ex) {
 
             }
